@@ -14,14 +14,21 @@ import lasagne
 import theano
 import theano.tensor as T
 
-class BatchNormLayer(lasagne.layers.Layer):
 
-    def __init__(self, incoming, axes=None, epsilon=0.01, alpha=0.5,
-            nonlinearity=None, **kwargs):
+class BatchNormLayer(lasagne.layers.Layer):
+    def __init__(
+        self,
+        incoming,
+        axes=None,
+        epsilon=0.01,
+        alpha=0.5,
+        nonlinearity=None,
+        **kwargs
+    ):
         """
         Instantiates a layer performing batch normalization of its inputs,
         following Ioffe et al. (http://arxiv.org/abs/1502.03167).
-        
+
         @param incoming: `Layer` instance or expected input shape
         @param axes: int or tuple of int denoting the axes to normalize over;
             defaults to all axes except for the second if omitted (this will
@@ -51,17 +58,39 @@ class BatchNormLayer(lasagne.layers.Layer):
             shape[axis] = 1
             broadcast[axis] = True
         if any(size is None for size in shape):
-            raise ValueError("BatchNormLayer needs specified input sizes for "
-                             "all dimensions/axes not normalized over.")
+            raise ValueError(
+                "BatchNormLayer needs specified input sizes for "
+                "all dimensions/axes not normalized over."
+            )
         dtype = theano.config.floatX
-        self.mean = self.add_param(lasagne.init.Constant(0), shape, 'mean',
-                                   trainable=False, regularizable=False)
-        self.std = self.add_param(lasagne.init.Constant(1), shape, 'std',
-                                  trainable=False, regularizable=False)
-        self.beta = self.add_param(lasagne.init.Constant(0), shape, 'beta',
-                                   trainable=True, regularizable=True)
-        self.gamma = self.add_param(lasagne.init.Constant(1), shape, 'gamma',
-                                    trainable=True, regularizable=False)
+        self.mean = self.add_param(
+            lasagne.init.Constant(0),
+            shape,
+            "mean",
+            trainable=False,
+            regularizable=False,
+        )
+        self.std = self.add_param(
+            lasagne.init.Constant(1),
+            shape,
+            "std",
+            trainable=False,
+            regularizable=False,
+        )
+        self.beta = self.add_param(
+            lasagne.init.Constant(0),
+            shape,
+            "beta",
+            trainable=True,
+            regularizable=True,
+        )
+        self.gamma = self.add_param(
+            lasagne.init.Constant(1),
+            shape,
+            "gamma",
+            trainable=True,
+            regularizable=False,
+        )
 
     def get_output_for(self, input, deterministic=False, **kwargs):
         if deterministic:
@@ -77,10 +106,12 @@ class BatchNormLayer(lasagne.layers.Layer):
             running_mean = theano.clone(self.mean, share_inputs=False)
             running_std = theano.clone(self.std, share_inputs=False)
             # set a default update for them
-            running_mean.default_update = ((1 - self.alpha) * running_mean +
-                                           self.alpha * mean)
-            running_std.default_update = ((1 - self.alpha) * running_std +
-                                          self.alpha * std)
+            running_mean.default_update = (
+                1 - self.alpha
+            ) * running_mean + self.alpha * mean
+            running_std.default_update = (
+                1 - self.alpha
+            ) * running_std + self.alpha * std
             # and include them in the graph so their default updates will be
             # applied (although the expressions will be optimized away later)
             mean += 0 * running_mean
@@ -93,6 +124,7 @@ class BatchNormLayer(lasagne.layers.Layer):
         normalized = (input - mean) * (gamma / std) + beta
         return self.nonlinearity(normalized)
 
+
 def batch_norm(layer):
     """
     Convenience function to apply batch normalization to a given layer's output.
@@ -104,10 +136,10 @@ def batch_norm(layer):
         it will be irreversibly modified as specified above
     @return: A `BatchNormLayer` instance stacked on the given `layer`
     """
-    nonlinearity = getattr(layer, 'nonlinearity', None)
+    nonlinearity = getattr(layer, "nonlinearity", None)
     if nonlinearity is not None:
         layer.nonlinearity = lasagne.nonlinearities.identity
-    if hasattr(layer, 'b'):
+    if hasattr(layer, "b"):
         del layer.params[layer.b]
         layer.b = None
     return BatchNormLayer(layer, nonlinearity=nonlinearity)
